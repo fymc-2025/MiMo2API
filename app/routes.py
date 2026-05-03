@@ -67,6 +67,8 @@ def validate_api_key(authorization: Optional[str]) -> bool:
     return config_manager.validate_api_key(key)
 
 
+TTS_MODELS = ["mimo-v2.5-tts", "mimo-v2.5-tts-voicedesign", "mimo-v2.5-tts-voiceclone"]
+
 # ─── 动态模型发现 ─────────────────────────────────────────────
 
 async def _do_discover() -> list:
@@ -84,21 +86,33 @@ async def _do_discover() -> list:
         print(f"[模型发现] 请求失败: {e}")
         return []
 
+    # 追加 TTS 模型（MiMo API 的 modelConfigList 不包含它们）
+    for tts in TTS_MODELS:
+        if tts not in models:
+            models.append(tts)
+
     async with _models_lock:
         _models_cache = models
     print(f"[模型发现] 找到 {len(models)} 个可用模型: {models}")
     return models
 
 
+def _append_tts_models(models: list) -> list:
+    for tts in TTS_MODELS:
+        if tts not in models:
+            models.append(tts)
+    return models
+
+
 async def discover_models() -> list:
     if config_manager.config.models:
-        return config_manager.config.models
+        return _append_tts_models(config_manager.config.models.copy())
     return await _do_discover()
 
 
 def get_models_list() -> list:
     if config_manager.config.models:
-        return config_manager.config.models
+        return _append_tts_models(config_manager.config.models.copy())
     if _models_cache is not None:
         return _models_cache
     return []
