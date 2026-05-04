@@ -853,7 +853,7 @@ async def _tts_generate(
             raise HTTPException(status_code=502, detail={"error": {"message": f"TTS generate error: {rdata.get('msg', 'unknown')}"}})
         task_id = rdata["data"]["taskId"]
 
-        for _ in range(60):
+        for _ in range(180):
             await asyncio.sleep(1)
             sr = await client.get(
                 f"{TT_API_BASE}/open-apis/tts/generateStatus?{query}&taskId={task_id}",
