@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-teal)](https://fastapi.tiangolo.com/)
 
-将**小米 MiMo AI Studio** 网页端对话转换为 **OpenAI 兼容 API**，支持多模态（文本 + 图片 + 文件）、多账号负载均衡。**本分支不含工具调用逻辑，专注纯对话，输出质量更高。**
+将**小米 MiMo AI Studio** 网页端对话转换为 **OpenAI 兼容 API**，支持多模态（文本 + 图片 + 文件）、语音合成（TTS）、多账号负载均衡。**本分支不含工具调用逻辑，专注纯对话，输出质量更高。**
 
 
 本项目基于原[mimo2api](https://github.com/Water008/MiMo2API) 修改。
