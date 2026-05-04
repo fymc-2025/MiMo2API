@@ -285,11 +285,15 @@ curl -X POST http://localhost:8080/v1/models/refresh \
 
 ### 8. 语音合成 (TTS)
 
-支持 OpenAI 兼容的 `/v1/audio/speech` 端点，三种模式通过**模型名后缀**区分：
+完整使用教程请参考 [`TTS-TUTORIAL.md`](TTS-TUTORIAL.md)，涵盖：
+- 风格标签 `(开心)(悲伤)(温柔)` 等
+- 音频标签 `[笑][哽咽][叹气]` 等
+- 唱歌模式、方言、角色扮演
+- 导演模式（角色/场景/指导三维度）
+- 音色设计、语音克隆
+- 常见场景配方
 
-#### 8.1 内置音色（默认模式）
-
-使用任何 TTS 模型名即可（如 `mimo-v2.5-tts`），通过 `voice` 参数选择音色：
+快速示例：
 
 ```bash
 curl http://localhost:8080/v1/audio/speech \
@@ -301,106 +305,6 @@ curl http://localhost:8080/v1/audio/speech \
     "voice": "冰糖"
   }' --output output.wav
 ```
-
-支持的语气/音色控制：
-- **内置音色：** `冰糖`（中文女声）、`茉莉`（中文女声）、`苏打`（中文男声）、`白桦`（中文男声）、`Mia`（英文女声）、`Chloe`（英文女声）、`Milo`（英文男声）、`Dean`（英文男声）、`mimo_default`（默认）
-- **OpenAI 兼容名：** `alloy`→`冰糖` / `echo`→`茉莉` / `fable`→`白桦` / `onyx`→`苏打` / `nova`→`Mia` / `shimmer`→`Chloe`
-- **语速控制：** `speed` 参数（0.5~2.0）
-- **唱歌模式：** 使用 `mimo-v2.5-tts` 模型，input 文本以 `(唱歌)` 开头即可
-- **风格标签控制：** 在 `input` 文本开头插入 `(风格)` 标签指定发音风格
-
-| 标签类型 | 示例 |
-|---------|------|
-| 基础情绪 | `(开心)` `(悲伤)` `(愤怒)` `(温柔)` `(平静)` `(冷漠)` |
-| 复合情绪 | `(怅然)` `(欣慰)` `(无奈)` `(愧疚)` `(释然)` `(动情)` |
-| 整体语调 | `(高冷)` `(活泼)` `(严肃)` `(慵懒)` `(俏皮)` `(深沉)` |
-| 音色定位 | `(磁性)` `(醇厚)` `(清亮)` `(空灵)` `(甜美)` `(沙哑)` |
-| 人设腔调 | `(夹子音)` `(御姐音)` `(正太音)` `(大叔音)` `(台湾腔)` |
-| 方言 | `(东北话)` `(四川话)` `(河南话)` `(粤语)` |
-| 角色扮演 | `(孙悟空)` `(林黛玉)` |
-| 唱歌 | `(唱歌)` |
-
-- **细粒度音频标签：** 在文本任意位置插入 `[标签]` 控制局部效果
-
-| 标签 | 示例效果 |
-|------|---------|
-| 语速与节奏 | `[吸气]` `[深呼吸]` `[叹气]` `[喘息]` `[屏息]` |
-| 情绪状态 | `[紧张]` `[激动]` `[疲惫]` `[委屈]` `[撒娇]` `[震惊]` |
-| 语音特征 | `[颤抖]` `[变调]` `[破音]` `[鼻音]` `[气声]` `[沙哑]` |
-| 哭笑表达 | `[笑]` `[轻笑]` `[冷笑]` `[抽泣]` `[呜咽]` `[哽咽]` |
-
-- **自然语言风格：** `style` 参数，如 `轻声细语`、`激昂慷慨`
-- **导演模式：** 支持 `角色/场景/指导` 三维度描述，适合角色配音
-
-#### 8.2 音色设计（自定义音色）
-
-模型名以 `-voicedesign` 结尾，通过 `style` 参数描述想要的音色：
-
-```bash
-curl http://localhost:8080/v1/audio/speech \
-  -H "Authorization: Bearer sk-mimo" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "mimo-v2.5-tts-voicedesign",
-    "input": "欢迎使用我们的产品",
-    "style": "年轻女性，声音甜美，语速适中"
-  }' --output output.wav
-```
-
-`style` 支持自然语言描述，不传则默认 `生成一个自然流畅的声音`。
-
-#### 8.3 语音克隆（音频样本克隆）
-
-模型名以 `-voiceclone` 结尾，`voice` 参数传音频 data URI：
-
-```bash
-# 准备音频样本
-BASE64=$(base64 -w0 sample.wav)
-
-curl http://localhost:8080/v1/audio/speech \
-  -H "Authorization: Bearer sk-mimo" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"mimo-v2.5-tts-voiceclone\",
-    \"input\": \"这是克隆出来的声音\",
-    \"voice\": \"data:audio/wav;base64,${BASE64}\"
-  }" --output cloned.wav
-```
-
-> **原理：** 自动将音频上传到小米 FDS 文件服务，然后以 FDS URL 作为音色参考提交 TTS 任务。
-
-#### 8.4 通过 /v1/chat/completions 调用 TTS（兼容官方格式）
-
-TTS 也可以通过标准 OpenAI 聊天接口调用，完全兼容官方 API 格式：
-
-```bash
-curl http://localhost:8080/v1/chat/completions \
-  -H "Authorization: Bearer sk-mimo" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "mimo-v2.5-tts",
-    "messages": [
-      {"role": "user", "content": "轻快上扬的语调"},
-      {"role": "assistant", "content": "今天天气真不错"}
-    ],
-    "audio": {
-      "format": "wav",
-      "voice": "冰糖"
-    }
-  }'
-```
-
-返回 OpenAI chat.completion 格式，音频以 base64 编码在 `choices[0].message.audio.data` 中。
-
-#### 8.5 客户端配置
-
-**ChatBox / NextChat / LobeChat：**
-- 在 TTS 配置中选择 `/v1/audio/speech` 端点（默认 OpenAI 标准路径即可）
-- 模型填写 `mimo-v2.5-tts`（内置音色）或其他后缀变体
-
-**RikkaHub：** 直接在聊天中使用标签控制发音（`(河南话)今天可冷`），无需额外配置。
-
-> **📖 参考官方文档：** [小米 MiMo 语音合成 API](https://platform.xiaomimimo.com/docs/zh-CN/usage-guide/speech-synthesis) / [v2.5 版 TTS](https://platform.xiaomimimo.com/docs/zh-CN/usage-guide/speech-synthesis-v2.5) — 完整音色列表、SSML 标签规则、导演模式编写指南。
 
 ## 管理命令
 
