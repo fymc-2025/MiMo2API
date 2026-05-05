@@ -4,13 +4,14 @@
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-teal)](https://fastapi.tiangolo.com/)
 
-将**小米 MiMo AI Studio** 网页端对话转换为 **OpenAI 兼容 API**，支持多模态（文本 + 图片 + 文件）、语音合成（TTS）、多账号负载均衡。**本分支不含工具调用逻辑，专注纯对话，输出质量更高。**
+将**小米 MiMo AI Studio** 网页端对话转换为 **OpenAI 兼容 API**，支持多模态（文本 + 图片 + 文件）、工具调用（Function Calling）、多账号负载均衡。
 
 
 本项目基于原[mimo2api](https://github.com/Water008/MiMo2API) 修改。
 本项目所修改代码均为ai完成，不含任何一句人工代码，望周知！
 
-> ⚠️ **这是 `no-tools` 分支** — 不支持 Function Calling。如需工具调用，请切换到 [`main` 分支](https://github.com/Fly143/MiMo2API)。
+> **💡 不需要工具调用或需要 TTS 语音合成？** 建议使用 [`no-tools` 分支](#无工具分支-no-tools) — 不注入工具 prompt，上下文更干净、输出质量更高，且完整保留 TTS 语音合成功能。
+
 
 
 ## 目录
@@ -30,28 +31,31 @@
   - [流式对话](#3-流式对话)
   - [多模态（图片理解）](#4-多模态图片理解)
   - [文件上传](#5-文件上传文本文件)
+  - [工具调用（Function Calling）](#6-工具调用function-calling)
   - [深度思考模式](#7-深度思考模式)
-  - [模型发现与刷新](#7-模型发现与刷新)
-  - [语音合成 (TTS)](#8-语音合成-tts)
+  - [模型发现与刷新](#8-模型发现与刷新)
+- [工具调用详解](#工具调用详解)
+- [无工具分支 (no-tools)](#无工具分支-no-tools)
 - [管理命令](#管理命令)
 - [项目结构](#项目结构)
 - [配置参考](#配置参考)
 - [依赖](#依赖)
 - [限制与已知问题](#限制与已知问题)
 - [常见问题](#常见问题)
-- [为什么选 no-tools](#为什么选-no-tools)
 - [许可](#许可)
 
 ## 特性
 
 - **OpenAI 完全兼容** — 标准 `/v1/chat/completions`（流式/非流式）、`/v1/models`、`/v1/models/{id}` 端点，可直接对接 ChatBox、NextChat、LobeChat 等任何 OpenAI 客户端
+- **工具调用（Function Calling）** — 5 种提取策略覆盖 MiMo 原生 XML (`<tool_call>`)、TOOL_CALL 标签、JSON、`<function_call>` XML、自由文本匹配，自动清洗响应中的工具残留
+- **流式筛分** — 有工具调用时实时分离正文与工具调用内容，客户端无需等待完整响应即可逐步接收，RikkaHub 等不再全文缓冲
 - **多模态支持** — omni 模型支持图片输入（URL、base64），自动完成三步上传流程（genUploadInfo → PUT → resource/parse）；所有模型支持文本文件上传（.md / .txt 等），同样走 MiMo 原生上传流程
 - **深度思考** — 支持 reasoning_effort 参数，自动分离 `<think>` 块输出
 - **多账号池** — 管理面板配置多个 MiMo 账号，轮询负载均衡，自动故障转移
 - **动态模型发现** — 启动时从 MiMo 官方 API 实时拉取可用模型列表，无需手动维护
 - **凭证管理** — 支持 Cookie 导入、cURL 导入两种配置方式
-- **语音合成（TTS）** — 标准 `/v1/audio/speech` 端点，支持三种模式：内置音色（任意 `mimo-v*.5-tts` 模型）、音色设计（`-voicedesign` 后缀）、语音克隆（`-voiceclone` 后缀 + 音频 data URI）
 - **CORS 全开** — 允许任意来源跨域访问
+- **无工具分支** — 提供 `no-tools` 分支，移除工具调用逻辑，适合纯对话场景，输出质量更高
 
 ## 架构
 
@@ -64,10 +68,10 @@
                 ▼
 ┌──────────────────────────────────────────────────────────┐
 │                     MiMo2API (FastAPI)                      │
-│  ┌─────────┐  ┌──────────────────────┐                   │
-│  │ routes  │  │     mimo_client      │                   │
-│  │ (API)   │──│ (HTTP/SSE 代理)       │                   │
-│  └─────────┘  └──────────────────────┘                   │
+│  ┌─────────┐  ┌──────────────┐  ┌──────────────────────┐ │
+│  │ routes  │  │ tool_sieve │  │  tool_call   │  │     mimo_client      │ │
+│  │ (API)   │──│ (流式筛分)  │──│ (5策略提取)   │──│ (HTTP/SSE 代理)       │ │
+│  └─────────┘  └──────────────┘  └──────────────────────┘ │
 │  ┌─────────┐  ┌──────────────┐  ┌──────────────────────┐ │
 │  │ config  │  │    utils     │  │      models           │ │
 │  │ (多账号) │  │ (图片上传等)  │  │ (OpenAI 数据模型)     │ │
@@ -87,7 +91,7 @@
 
 ```bash
 # 直接克隆（推荐）
-git clone -b no-tools https://github.com/Fly143/MiMo2API.git
+git clone https://github.com/Fly143/MiMo2API.git
 cd MiMo2API
 chmod +x deploy.sh
 ./deploy.sh
@@ -95,6 +99,8 @@ chmod +x deploy.sh
 ```
 
 部署完成后，服务已在 **前台** 启动。见下方[管理命令](#管理命令)了解后台运行等方式。
+
+> 💡 **不需要工具调用或需要 TTS？** 克隆 [`no-tools` 分支](https://github.com/Fly143/MiMo2API/tree/no-tools) 即可获得更干净的纯对话版本（无 prompt 注入，输出质量更高），且包含完整语音合成（TTS）功能。
 
 ### 手动安装
 
@@ -152,7 +158,7 @@ python main.py
 
 ```bash
 curl http://localhost:8080/v1/models \
-  -H "Authorization: Bearer ***
+  -H "Authorization: Bearer sk-mimo"
 ```
 
 返回模型列表会显示所有 MiMo 官方当前可用的模型。
@@ -161,7 +167,7 @@ curl http://localhost:8080/v1/models \
 
 ```bash
 curl http://localhost:8080/v1/chat/completions \
-  -H "Authorization: Bearer *** \
+  -H "Authorization: Bearer sk-mimo" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "mimo-v2-flash",
@@ -175,7 +181,7 @@ curl http://localhost:8080/v1/chat/completions \
 
 ```bash
 curl http://localhost:8080/v1/chat/completions \
-  -H "Authorization: Bearer *** \
+  -H "Authorization: Bearer sk-mimo" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "mimo-v2-flash",
@@ -195,7 +201,7 @@ curl http://localhost:8080/v1/chat/completions \
 **URL 方式：**
 ```bash
 curl http://localhost:8080/v1/chat/completions \
-  -H "Authorization: Bearer *** \
+  -H "Authorization: Bearer sk-mimo" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "mimo-v2-omni",
@@ -212,7 +218,7 @@ curl http://localhost:8080/v1/chat/completions \
 **Base64 方式：**
 ```bash
 curl http://localhost:8080/v1/chat/completions \
-  -H "Authorization: Bearer *** \
+  -H "Authorization: Bearer sk-mimo" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "mimo-v2-omni",
@@ -237,7 +243,7 @@ curl http://localhost:8080/v1/chat/completions \
 BASE64=$(base64 -w0 yourfile.md)
 
 curl http://localhost:8080/v1/chat/completions \
-  -H "Authorization: Bearer *** \
+  -H "Authorization: Bearer sk-mimo" \
   -H "Content-Type: application/json" \
   -d "{
     \"model\": \"mimo-v2-pro\",
@@ -253,13 +259,64 @@ curl http://localhost:8080/v1/chat/completions \
 
 > **支持的格式：** `.txt`、`.md`、`.py`、`.json`、`.yaml` 等纯文本文件。文件走 MiMo 原生上传流程（`mediaType: "file"`），MiMo 按 token 预算自动读取可用部分。
 
-### 6. 深度思考模式
+### 6. 工具调用（Function Calling）
+
+```bash
+curl http://localhost:8080/v1/chat/completions \
+  -H "Authorization: Bearer sk-mimo" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "mimo-v2-pro",
+    "messages": [
+      {"role": "user", "content": "北京今天天气怎么样？"}
+    ],
+    "tools": [{
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "description": "查询指定城市的天气",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "city": {"type": "string", "description": "城市名称"}
+          },
+          "required": ["city"]
+        }
+      }
+    }],
+    "tool_choice": "auto"
+  }'
+```
+
+成功时返回 `finish_reason: "tool_calls"`，`message.tool_calls` 包含结构化的函数调用：
+
+```json
+{
+  "choices": [{
+    "finish_reason": "tool_calls",
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_abc123...",
+        "type": "function",
+        "function": {
+          "name": "get_weather",
+          "arguments": "{\"city\": \"北京\"}"
+        }
+      }]
+    }
+  }]
+}
+```
+
+### 7. 深度思考模式
 
 使用 `reasoning_effort` 参数启用深度思考：
 
 ```bash
 curl http://localhost:8080/v1/chat/completions \
-  -H "Authorization: Bearer *** \
+  -H "Authorization: Bearer sk-mimo" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "mimo-v2-pro",
@@ -280,31 +337,200 @@ curl http://localhost:8080/v1/chat/completions \
 ```bash
 # 强制刷新模型列表
 curl -X POST http://localhost:8080/v1/models/refresh \
-  -H "Authorization: Bearer ***"
+  -H "Authorization: Bearer sk-mimo"
 ```
 
-### 8. 语音合成 (TTS)
+### 8. Responses API
 
-完整使用教程请参考 [`TTS-TUTORIAL.md`](TTS-TUTORIAL.md)，涵盖：
-- 风格标签 `(开心)(悲伤)(温柔)` 等
-- 音频标签 `[笑][哽咽][叹气]` 等
-- 唱歌模式、方言、角色扮演
-- 导演模式（角色/场景/指导三维度）
-- 音色设计、语音克隆
-- 常见场景配方
-
-快速示例：
+OpenAI 最新 Responses API 格式，`/v1/responses` 端点：
 
 ```bash
-curl http://localhost:8080/v1/audio/speech \
+curl http://localhost:8080/v1/responses \
   -H "Authorization: Bearer sk-mimo" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "mimo-v2.5-tts",
-    "input": "今天天气真不错",
-    "voice": "冰糖"
-  }' --output output.wav
+    "model": "mimo-v2-pro",
+    "input": [
+      {"role": "user", "content": "你好"}
+    ]
+  }'
 ```
+
+支持流式（`"stream": true`）、工具调用、深度思考、系统指令等，详见下方 [Responses API 详解](#responses-api-详解)。
+
+## 工具调用详解
+
+MiMo API 本身**不支持** OpenAI function calling 格式。本代理通过**提示词注入 + 多策略提取**实现：
+
+### 提示词注入
+
+将 OpenAI tools 定义转换为极简文本，注入到 system 消息中：
+
+```text
+# Tools
+- get_weather(city) — 查询指定城市的天气
+- search_web(query, page) — 搜索网页
+```
+
+### 5 种提取策略（按优先级）
+
+| 策略 | 格式 | 说明 |
+|------|------|------|
+| 1 | `TOOL_CALL: name(key=value)` | 正则匹配，最可靠 |
+| 2 | `{"name": "x", "arguments": {...}}` | JSON 块解析 |
+| 3 | `name(args)` | 自由文本关键词匹配 |
+| 4 | `<tool_call><function=NAME><parameter=K>V</parameter></function></tool_call>` | MiMo 原生 XML 格式 |
+| 5 | `<function_call>{"name":"x","arguments":{...}}</function_call>` | XML 包裹 JSON |
+
+### 响应清理
+
+提取成功后，自动清理响应中的工具残留文本（TOOL_CALL 行、XML 标签、JSON 块）。
+
+### 流式筛分
+
+有工具调用且 `stream: true` 时，`tool_sieve` 引擎逐字扫描 MiMo 响应流，实时分离**正文内容**和**工具调用文本**：
+
+- **正文** → 即时转为 `delta.content` 逐块输出，客户端无需等待即可显示
+- **工具调用** → 缓冲至流结束后解析，然后作为 `tool_calls` 一次性输出
+
+非筛分模式（无工具流、非流）不受影响，保持原有逻辑。筛选检测支持三种格式：`TOOL_CALL:`、`<tool_call>`、`<function=`，同时白名单排除 `<think>` 深度思考标签。
+
+## 无工具分支 (no-tools)
+
+### 为什么注入太多 Prompt 会让模型变笨
+
+工具调用（Function Calling）的实现方式是**将工具定义以文本形式注入到 system/user 消息中**。这带来不可忽视的副作用：
+
+**每注入一个工具定义，就消耗一部分模型的"注意力预算"。**
+
+具体影响：
+
+- **注意力稀释** — 大量工具描述占据上下文，模型分配到用户实际问题的注意力比例下降，回答质量明显变差
+- **格式过拟合** — 模型过度关注 `TOOL_CALL` 输出格式，在不需要调用工具的纯对话中也可能产生格式残留或奇怪的输出
+- **混淆增加** — 工具名称、参数描述与正常对话内容混在一起，增加了模型混淆的概率，尤其是参数较多的工具
+- **Token 浪费** — 工具 prompt 每次请求都占用 token，既浪费上下文窗口又增加上游处理时间，而大部分对话根本不需要工具
+
+**简单说：prompt 越多，模型越容易"分心"，回答质量越差。**
+
+### 无工具分支
+
+如果你的使用场景**不需要**工具调用（纯对话、写作、翻译、代码生成、问答等），强烈建议使用 `no-tools` 分支：
+
+```bash
+# 克隆无工具版本
+git clone -b no-tools https://github.com/Fly143/MiMo2API.git
+```
+
+`no-tools` 分支与 `main` 分支的区别：
+
+| | main | no-tools |
+|---|---|---|
+| 工具 prompt 注入 | ✅ 每次请求注入工具描述 | ❌ 不注入任何 prompt |
+| 工具提取解析 | ✅ 5 种策略提取 TOOL_CALL | ❌ 不解析 |
+| 响应清理 | ✅ 清理工具残留文本 | ❌ 不需要 |
+| Responses API | ✅ `/v1/responses`（含工具调用） | ✅ `/v1/responses`（纯对话） |
+| 多模态 | ✅ | ✅ |
+| 文件上传（.md/.txt） | ✅ | ✅ |
+| 深度思考 | ✅ | ✅ |
+| 多账号 | ✅ | ✅ |
+| 模型发现 | ✅ | ✅ |
+| TTS 语音合成 | ❌ 不包含 | ✅ `/v1/audio/speech` |
+
+**效果：** 上下文更干净，模型注意力完全集中在用户问题上，回答更专注、质量更高，代码也更简洁。对于大多数日常使用场景，无工具分支是更好的选择。
+
+## Responses API 详解
+
+端点：`POST /v1/responses`
+
+MiMo2API 完整实现了 OpenAI Responses API 格式，支持与 Chat Completions 相同的底层能力。
+
+### 与 Chat Completions 的区别
+
+| | Chat Completions | Responses API |
+|---|---|---|
+| 端点 | `/v1/chat/completions` | `/v1/responses` |
+| 消息字段 | `messages` | `input` |
+| 系统指令 | `messages[role=system]` | `instructions` |
+| 工具格式 | `tool.function.name` | `tool.name` |
+| 响应格式 | `choices[0].message` | `output[]` 数组 |
+| 思考内容 | `reasoning_content` | `output[type=reasoning]` |
+| 工具调用 | `message.tool_calls` | `output[type=function_call]` |
+
+### 基本用法
+
+```bash
+# 非流式
+curl http://localhost:8080/v1/responses \
+  -H "Authorization: Bearer sk-mimo" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "mimo-v2-pro",
+    "input": [{"role": "user", "content": "你好"}]
+  }'
+
+# 流式（SSE）
+curl http://localhost:8080/v1/responses \
+  -H "Authorization: Bearer sk-mimo" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "mimo-v2-pro",
+    "input": [{"role": "user", "content": "讲个故事"}],
+    "stream": true
+  }'
+```
+
+### 工具调用
+
+```bash
+curl http://localhost:8080/v1/responses \
+  -H "Authorization: Bearer sk-mimo" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "mimo-v2-pro",
+    "input": [{"role": "user", "content": "现在几点"}],
+    "tools": [{
+      "type": "function",
+      "name": "get_time",
+      "description": "获取当前时间",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "timezone": {"type": "string"}
+        }
+      }
+    }]
+  }'
+```
+
+> **注意工具格式：** Responses API 的 `tools` 没有 `function` 嵌套层，`name` 直接在顶层（不同于 Chat Completions 的 `tool.function.name`）。MiMo2API 兼容两种格式。
+
+### 响应格式
+
+```json
+{
+  "output": [
+    {
+      "type": "reasoning",
+      "summary": [{"type": "summary_text", "text": "模型思考内容..."}]
+    },
+    {
+      "type": "function_call",
+      "id": "fc_abc123...",
+      "call_id": "call_xyz789...",
+      "name": "get_time",
+      "arguments": "{}"
+    },
+    {
+      "type": "message",
+      "role": "assistant",
+      "status": "completed",
+      "content": [{"type": "output_text", "text": "现在是..."}]
+    }
+  ]
+}
+```
+
+`output` 按顺序包含：reasoning（如有）→ function_call（如有）→ message。
 
 ## 管理命令
 
@@ -356,6 +582,8 @@ MiMo2API/
     ├── mimo_client.py       # MiMo API 客户端（HTTP SSE 流处理）
     ├── config.py            # 配置管理（多账号、线程安全、轮询）
     ├── utils.py             # 工具函数（cURL解析、图片上传、消息构建）
+    ├── tool_sieve.py       # 流式筛分引擎（实时分离工具调用与正文）
+    ├── tool_call.py         # 工具调用（提示词注入 + 5策略提取 + 清理）
     └── admin.html           # Web 管理面板（内嵌单文件）
 ```
 
@@ -404,11 +632,10 @@ pip install -r requirements.txt
 
 | 限制 | 说明 |
 |------|------|
-| Token 有效期 & 静默降级 | serviceToken 约 24 小时过期。过期后基础聊天（flash/pro）可能仍然正常，但 **TTS 生成和 mimo-v2.5 / mimo-v2-omni 多模态识图**会静默失效（502/胡说八道）。管理面板"测试连接"只检查普通 chat 端点，无法发现此问题。修复需网页端退出并重新登录，见下方 FAQ |
+| Token 有效期 & 静默降级 | serviceToken 约 24 小时过期。过期后基础聊天（flash/pro）可能仍然正常，但 **mimo-v2.5 / mimo-v2-omni 多模态识图**会静默失效。管理面板"测试连接"只检查普通 chat 端点，无法发现此问题。修复需网页端退出并重新登录，见下方 FAQ |
 | 多模态模型 | `mimo-v2.5` / `mimo-v2-omni` 支持识图；全系模型支持文件上传与图片 OCR 文字提取 |
-| TTS 模型 | 支持 `mimo-v*.5-tts`（内置音色）、`-voicedesign`（音色设计）、`-voiceclone`（语音克隆）三种模式 |
 | 并发限制 | 取决于 MiMo 服务端限制（通常 1-2 并发/账号），多账号可缓解 |
-| 不支持 Embeddings | 仅实现 Chat Completions 端点 |
+| 不支持 Embeddings | 仅实现 Chat Completions 和 Responses 端点 |
 | 非流式实际走 SSE | MiMo API 只提供 SSE 流，非流式请求会缓冲全部 SSE 后合并返回 |
 
 ## 常见问题
@@ -427,33 +654,20 @@ A: 通常是因为服务端 session 状态异常，仅重新获取 Cookie 无效
 4. 在管理面板重新导入 Cookie  
 如果是账号被限制，换另一个账号。  
 
-**Q: TTS 语音合成或 mimo-v2.5 / mimo-v2-omni 多模态识图突然无法使用，但测试连接显示正常？**  
-A: 这是 serviceToken 过期后的**静默降级**现象。MiMo API 对高级功能（TTS 生成、多模态识图等）的凭证校验比普通聊天严格。Token 过期后：  
+**Q: mimo-v2.5 / mimo-v2-omni 多模态识图突然失效，但测试连接显示正常？**  
+A: 这是 serviceToken 过期后的**静默降级**现象。MiMo API 对多模态识图的凭证校验比普通聊天严格。Token 过期后：  
 - 基础聊天（flash/pro）可能仍能正常使用  
 - 管理面板"测试连接"也显示正常（它只检查普通 chat 端点）  
-- 但 TTS 生成会超时或 502  
-- mimo-v2.5 / mimo-v2-omni 多模态识图会返回胡说八道的结果或报错  
+- 但多模态识图会返回胡说八道的结果或报错  
 
-**症状判断：** 如果普通对话正常，但 TTS / 多模态识图突然失效，大概率是凭证过期。  
+**症状判断：** 如果普通对话正常，但多模态识图突然失效，大概率是凭证过期。  
 **修复：** 同上——网页端退出重新登录，再导入新 Cookie。如果换了新 Cookie 仍无效，换另一个账号试试。
 
 **Q: tool_call 没有被提取？**
-A: 查看日志确认响应内容。如果 MiMo 没有按预期输出工具调用格式，可能是提示词不够清晰，或者该模型理解力有限。推荐使用 `mimo-v2-pro` 进行工具调用。
+A: 查看日志确认响应内容。如果 MiMo 没有按预期输出工具调用格式，可能是提示词不够清晰，或者该模型理解力有限。推荐使用 `mimo-v2.5-pro` 进行工具调用。
 
 **Q: 可以部署到公网吗？**
 A: 可以，但注意修改默认 API Key（`sk-mimo` 太简单），建议使用 Nginx 反向代理 + HTTPS。
-
-### 为什么选 no-tools
-
-本分支移除了所有工具调用逻辑（`tool_call.py`），**不注入任何工具 prompt**。
-
-效果：
-- 上下文更干净 — 模型注意力 100% 在用户问题上
-- 输出质量更高 — 不会因格式指令"分心"
-- 代码更简洁 — 少一个模块，部署更快
-- 不会幻觉 TOOL_CALL — 模型不会无中生有输出工具调用格式
-
-如果后续需要工具调用，切回 `main` 分支即可。
 
 ## 许可
 
