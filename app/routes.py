@@ -1630,6 +1630,10 @@ async def _stream_response_events(body: dict, account):
                 "part": _response_text_item(full_text, message_item_id)["content"][0],
             }
         for idx, item in enumerate(output):
+            if item.get("type") == "reasoning":
+                # 由 reasoning_text.done 结束，不发 output_item.done
+                # 避免 RikkaHub 重复创建空白思维链卡片
+                continue
             yield {
                 "type": "response.output_item.done",
                 "output_index": idx,
