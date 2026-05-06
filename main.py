@@ -15,8 +15,8 @@ from app.batch import init_batch_storage as init_anthropic_batches
 # 创建FastAPI应用
 app = FastAPI(
     title="Mimo2API",
-    description="将小米 Mimo AI 转换为 OpenAI 兼容 API",
-    version="1.0.0"
+    description="将小米 Mimo AI 转换为 OpenAI + Anthropic 兼容 API（Chat / Responses / Anthropic Messages）",
+    version="2.0.0"
 )
 
 # 添加CORS中间件
