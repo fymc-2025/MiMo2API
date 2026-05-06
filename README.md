@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-teal)](https://fastapi.tiangolo.com/)
 
-将**小米 MiMo AI Studio** 网页端对话转换为 **OpenAI 兼容 API**，支持多模态（文本 + 图片 + 文件）、语音合成（TTS）、多账号负载均衡。**本分支不含工具调用逻辑，专注纯对话，输出质量更高。**
+将**小米 MiMo AI Studio** 网页端对话转换为 **OpenAI + Anthropic 兼容 API**，支持多模态（文本 + 图片 + 文件）、语音合成（TTS）、Anthropic Messages API、多账号负载均衡。**本分支不含工具调用逻辑，专注纯对话，输出质量更高。**
 
 
 本项目基于原[mimo2api](https://github.com/Water008/MiMo2API) 修改。
@@ -33,6 +33,7 @@
   - [深度思考模式](#7-深度思考模式)
   - [模型发现与刷新](#7-模型发现与刷新)
   - [语音合成 (TTS)](#8-语音合成-tts)
+  - [Anthropic Messages API](#9-anthropic-messages-api)
 - [管理命令](#管理命令)
 - [项目结构](#项目结构)
 - [配置参考](#配置参考)
@@ -45,6 +46,7 @@
 ## 特性
 
 - **OpenAI 完全兼容** — 标准 `/v1/chat/completions`（流式/非流式）、`/v1/models`、`/v1/models/{id}` 端点，可直接对接 ChatBox、NextChat、LobeChat 等任何 OpenAI 客户端
+- **Anthropic Messages API 兼容** — 完整支持 `/v1/messages`（流式/非流式）+ count_tokens + batches CRUD + message_get，共 9 个 Anthropic 端点，可对接 RikkaHub 等 Anthropic 客户端
 - **多模态支持** — omni 模型支持图片输入（URL、base64），自动完成三步上传流程（genUploadInfo → PUT → resource/parse）；所有模型支持文本文件上传（.md / .txt 等），同样走 MiMo 原生上传流程
 - **深度思考** — 支持 reasoning_effort 参数，自动分离 `<think>` 块输出
 - **多账号池** — 管理面板配置多个 MiMo 账号，轮询负载均衡，自动故障转移
@@ -374,6 +376,33 @@ curl http://localhost:8080/v1/responses \
 
 > **提示：** 完整版（含工具调用）见 [`main` 分支](https://github.com/Fly143/MiMo2API)，Responses API 在 main 分支额外支持 `tools` / `function_call`。
 
+## 9. Anthropic Messages API
+
+MiMo2API v2.0.0 新增 Anthropic Messages API 完整兼容支持。支持全部 9 个端点：
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/v1/messages` | POST | 发消息（流式/非流式，含思考链） |
+| `/v1/messages/count_tokens` | POST | 计算 token 数 |
+| `/v1/messages/{message_id}` | GET | 查询已存储的消息 |
+| `/v1/messages/batches` | POST/GET | 创建/列表 |
+| `/v1/messages/batches/{batch_id}` | GET/POST/DELETE | 管理批量任务 |
+
+```bash
+# 非流式
+curl -X POST http://localhost:8080/v1/messages \
+  -H "x-api-key: sk-mimo" \
+  -H "Content-Type: application/json" \
+  -H "anthropic-version: 2023-06-01" \
+  -d '{
+    "model": "mimo-v2-flash",
+    "max_tokens": 1024,
+    "messages": [{"role": "user", "content": "你好"}]
+  }'
+```
+
+认证支持 `x-api-key`（Anthropic 原生）和 `Authorization: Bearer`（向后兼容）。MiMo 的 `<think>` 标签自动转换为 Anthropic thinking block。
+
 ## 管理命令
 
 ```bash
@@ -405,8 +434,10 @@ lsof -i :8080
 | 地址 | 说明 |
 |------|------|
 | `http://localhost:8080` | Web 管理后台（配置账号） |
-| `http://localhost:8080/v1` | OpenAI 兼容 API 根路径 |
+| `http://localhost:8080/v1` | OpenAI + Anthropic 兼容 API 根路径 |
 | `http://localhost:8080/docs` | Swagger API 文档 |
+| `http://localhost:8080/v1/messages` | Anthropic Messages API |
+| `http://localhost:8080/v1/responses` | OpenAI Responses API |
 
 ## 项目结构
 
@@ -417,15 +448,21 @@ MiMo2API/
 ├── requirements.txt         # Python 依赖
 ├── config.example.json      # 配置文件模板
 ├── config.json              # 实际配置（.gitignore，含凭证）
-└── app/
+├── app/
     ├── __init__.py
     ├── routes.py            # API 路由（chat/models/管理面板/账号CRUD）
+    ├── anthropic_routes.py  # Anthropic Messages API 路由（9 个端点）
+    ├── anthropic.py         # Anthropic ↔ OpenAI 格式转换核心
+    ├── batch.py             # Anthropic 批量任务 + count_tokens
     ├── models.py            # OpenAI 兼容数据模型（Pydantic）
     ├── mimo_client.py       # MiMo API 客户端（HTTP SSE 流处理）
     ├── config.py            # 配置管理（多账号、线程安全、轮询）
     ├── utils.py             # 工具函数（cURL解析、图片上传、消息构建）
-    └── admin.html           # Web 管理面板（内嵌单文件）
-```
+    ├── usage_store.py       # 用量数据持久化
+    ├── session_store.py     # 会话管理（指纹续接 conversationId）
+    ├── response_store.py    # Responses API 记录持久化
+    └── web/
+        └── index.html       # Web 管理面板
 
 ## 配置参考
 
