@@ -25,6 +25,78 @@
       "model": "mimo-v2.5-tts",
       "created": 1777828871.0610933,
       "last_used": 1777828871.0610933
+    },
+    {
+      "conversation_id": "3ca0a7b6efa04510a8177e5b042b0ff4",
+      "fingerprint": "5aced9397fc4a6ba78e47d642ce4949bc9ba17f05868fe28454432d93889f6e6",
+      "prompt_tokens": 162,
+      "model": "mimo-v2-flash",
+      "created": 1778087400.8791645,
+      "last_used": 1778087407.3081803
+    },
+    {
+      "conversation_id": "e9a9887a38e74796b2cabfff3d3ddbf3",
+      "fingerprint": "",
+      "prompt_tokens": 0,
+      "model": "claude-sonnet-4-6",
+      "created": 1778129689.5888035,
+      "last_used": 1778129689.5888035
+    },
+    {
+      "conversation_id": "e1721367dfa646cdbc056e024e646ecc",
+      "fingerprint": "",
+      "prompt_tokens": 0,
+      "model": "claude-opus-4-6",
+      "created": 1778129691.0528126,
+      "last_used": 1778129691.0528126
+    },
+    {
+      "conversation_id": "ed6601ef1b7643c5bb2d3ee231dcb658",
+      "fingerprint": "",
+      "prompt_tokens": 163,
+      "model": "mimo-v2-flash",
+      "created": 1778129692.5029066,
+      "last_used": 1778129704.7865262
+    },
+    {
+      "conversation_id": "66f31a101d6f4852b1705cd67ce3a7a4",
+      "fingerprint": "",
+      "prompt_tokens": 0,
+      "model": "claude-sonnet-4-6",
+      "created": 1778129726.4059663,
+      "last_used": 1778129726.4059663
+    },
+    {
+      "conversation_id": "a1adee19c97e4ebf8edfe38aca8cb86b",
+      "fingerprint": "",
+      "prompt_tokens": 163,
+      "model": "mimo-v2-flash",
+      "created": 1778129771.3963656,
+      "last_used": 1778129778.7892103
+    },
+    {
+      "conversation_id": "79a14a839ba240a28b17116c400d20cb",
+      "fingerprint": "",
+      "prompt_tokens": 3098,
+      "model": "mimo-v2-pro",
+      "created": 1778129795.3723516,
+      "last_used": 1778129800.5245748
+    },
+    {
+      "conversation_id": "ba239ceb3d5240eca556bf5db078e22a",
+      "fingerprint": "",
+      "prompt_tokens": 163,
+      "model": "mimo-v2-flash",
+      "created": 1778129800.5523722,
+      "last_used": 1778129810.2046382
+    },
+    {
+      "conversation_id": "716d53a9802c483fbd14a15d50f2b46d",
+      "fingerprint": "",
+      "prompt_tokens": 163,
+      "model": "mimo-v2-flash",
+      "created": 1778129810.255092,
+      "last_used": 1778129819.9174778
     }
   ]
 }
