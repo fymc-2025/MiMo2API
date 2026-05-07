@@ -2,38 +2,52 @@
 
 本文件记录 MiMo2API 的所有重要变更。
 
+## [v2.1.0] — 2026-05-07
+
+### Added
+- **Anthropic 模型名映射** — Claude Code CLI 等工具可使用 Anthropic 风格模型名（如 `claude-sonnet-4-6`），内部自动映射为对应 MiMo 模型
+  - `claude-opus-4-6` → `mimo-v2-pro`
+  - `claude-sonnet-4-6` → `mimo-v2-flash`
+  - `claude-haiku-4-5` → `mimo-v2-flash`
+  - 支持 search/nothinking 变体及 Claude 3.x/4.x 历史名
+- MiMo 原生名（`mimo-*`）继续直接可用，`/v1/models` 返回不变
+
+## [v2.0.0] — 2026-05-06
+
+### Added
+- **Anthropic Messages API 全兼容** — 新增 9 个 Anthropic 端点：`/v1/messages`（流式/非流式）、count_tokens、message CRUD、batch 全流程
+- **多账号管理** — Web 面板增删账号、轮询负载均衡
+- **TTS 语音合成**（no-tools）— 声线克隆、音色设计、导演模式
+
+### Changed
+- 路由拆分为 `app/anthropic_routes.py`（APIRouter 模式）
+- `app/anthropic.py` + `app/batch.py` 模块化
+
 ## [Unreleased]
 
 ### Changed
-- TTS 轮询超时从 60s 提升到 180s
+- CHANGELOG.md 初始化
+- README 补充静默降级 FAQ
 
 ---
 
 ## [v1.0.0] — 2026-05-04
 
 ### Added
-- **工具调用（main 分支）** — 6 种提取策略覆盖 TOOL_CALL、JSON、MiMo 原生 XML、`<function_call>`、自由文本匹配、中文 `[调用工具:]` 格式
+- **工具调用** — 6 种提取策略覆盖 TOOL_CALL、JSON、MiMo 原生 XML、`<function_call>`、自由文本匹配、中文 `[调用工具:]` 格式
 - **流式筛分（tool_sieve）** — 实时分离流式响应中的正文与工具调用，无需全量缓冲再输出
 - **会话管理** — SHA256 消息指纹续接 MiMo conversationId，跨请求保持上下文
 - **按模型上下文窗口** — 根据官方 Pricing 页设置精确的 `context_length`/`max_output_tokens`（v2.5-pro/v2-pro/v2.5 为 1M，v2-flash/v2-omni 为 256K）
 - **文本文件上传** — 原生 MiMo resource 上传流程（genUploadInfo → PUT OSS → resource/parse），支持 .md/.txt/.py/.json 等
 - **用量统计** — 按模型分组的 Token 追踪，Web 面板可视化，支持今日/本周/全部筛选，清空按钮
 - **Web 管理面板** — 多 Tab 布局（cURL 导入、Cookie 导入、账号列表、用量统计、API Key 管理）
-- **TTS 语音合成（仅 no-tools 分支）**：
-  - `/v1/audio/speech` — OpenAI 兼容端点
-  - `/v1/chat/completions` 的 `audio` 参数支持
-  - 三模型：`mimo-v2.5-tts`（标准）、`-voicedesign`（音色设计）、`-voiceclone`（语音克隆）
-  - 风格标签 `(标签)`、音频标签 `[标签]`、导演模式、唱歌模式、方言支持
-  - OpenAI 标准音色映射（alloy→冰糖、echo→茉莉 等）
-  - `TTS-TUTORIAL.md` 完整使用教程
 
 ### Changed
 - **双分支架构** — `main`（工具调用）和 `no-tools`（纯对话 + TTS）独立维护
 - **工具提示词精简** — 从 30+ 行降到 ~10 行，移到 query 末尾，每次最多注入 6 个工具
 - **三轮注入策略** — 首轮完整提示词，后续轮只列工具名（不加行为指令），防止死循环
 - **查询格式重排** — 用户消息在前，工具信息在后，跳过 system 消息（MiMo 不支持角色分离）
-- **语音模型路由** — 基于后缀（`-voicedesign`/`-voiceclone`）而非参数判断，满足 MiMo API 的 modelCode 要求
-- **模型列表** — 从 MiMo API 动态发现，TTS 模型静态追加，未知模型过滤
+- **模型列表** — 从 MiMo API 动态发现，未知模型过滤
 
 ### Fixed
 - **Pydantic v1 兼容** — `model_dump()` 改为 `dict()`（项目依赖 pydantic<2）
@@ -50,18 +64,12 @@
 - **Cookie 字符串解析** — 支持粘贴整段 `key=value; key=value` Cookie header
 - **保存按钮无反馈** — 所有保存按钮增加 disabled + loading 文本
 
-### Removed
-- `main` 分支的所有 TTS 代码（路由、VOICE_MAP、`_tts_generate`、`_get_tts_account`、`TTS-TUTORIAL.md`）— TTS 为 no-tools 专有
-- 硬编码的 128K 上下文兜底值（替换为按模型动态值）
-- 工具提示词中的强制行为指令（导致死循环）
-
 ### 已知问题
 - serviceToken 约 24 小时过期，需网页端退出重新登录（仅刷新 Cookie 无效）
-- **静默降级：** Token 过期后，基础聊天（flash/pro）和"测试连接"仍显示正常，但 TTS 生成和多模态识图会静默失效。如果只聊天空正常但 TTS/识图不工作，优先怀疑凭证过期
+- **静默降级：** Token 过期后，基础聊天（flash/pro）和"测试连接"仍显示正常，但 `mimo-v2.5` / `mimo-v2-omni` 多模态识图会静默失效。如果只聊天空正常但识图不工作，优先怀疑凭证过期
 - MiMo 服务端并发限制：约 1-2 请求/账号
 - 不支持 Embeddings 端点
 - 非原生 function calling（通过文本提示模拟）
-- 流式有工具时，TOOL_CALL 虽被筛分截走，但 content 已提前发出
 
 ---
 
