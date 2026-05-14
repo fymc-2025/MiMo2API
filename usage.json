@@ -1,83 +1,143 @@
 {
   "models": {
-    "mimo-v2.5-tts": {
-      "prompt_tokens": 0,
-      "completion_tokens": 0,
-      "total_tokens": 0,
-      "requests": 2
+    "mimo-v2.5": {
+      "prompt_tokens": 30693,
+      "completion_tokens": 705,
+      "total_tokens": 31398,
+      "requests": 9
+    },
+    "mimo-v2.5-pro": {
+      "prompt_tokens": 27018,
+      "completion_tokens": 331,
+      "total_tokens": 27349,
+      "requests": 7
     },
     "mimo-v2-flash": {
-      "prompt_tokens": 814,
-      "completion_tokens": 3302,
-      "total_tokens": 4116,
-      "requests": 5
+      "prompt_tokens": 19202,
+      "completion_tokens": 39099,
+      "total_tokens": 58301,
+      "requests": 42
     },
-    "claude-sonnet-4-6": {
+    "mimo-v2-pro": {
+      "prompt_tokens": 3112,
+      "completion_tokens": 164,
+      "total_tokens": 3276,
+      "requests": 1
+    },
+    "mimo-2.5-pro": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "requests": 1
+    },
+    "mimo-default": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "requests": 1
+    },
+    "mimo-expert": {
       "prompt_tokens": 0,
       "completion_tokens": 0,
       "total_tokens": 0,
       "requests": 2
-    },
-    "claude-opus-4-6": {
-      "prompt_tokens": 0,
-      "completion_tokens": 0,
-      "total_tokens": 0,
-      "requests": 1
-    },
-    "mimo-v2-pro": {
-      "prompt_tokens": 3098,
-      "completion_tokens": 58,
-      "total_tokens": 3156,
-      "requests": 1
     }
   },
   "total": {
-    "prompt_tokens": 3912,
-    "completion_tokens": 3360,
-    "total_tokens": 7272,
-    "requests": 11
+    "prompt_tokens": 80025,
+    "completion_tokens": 40299,
+    "total_tokens": 120324,
+    "requests": 63
   },
   "daily": {
     "2026-05-03": {
-      "mimo-v2.5-tts": {
-        "prompt_tokens": 0,
-        "completion_tokens": 0,
-        "total_tokens": 0,
+      "mimo-v2.5": {
+        "prompt_tokens": 7841,
+        "completion_tokens": 285,
+        "total_tokens": 8126,
         "requests": 2
+      },
+      "mimo-v2.5-pro": {
+        "prompt_tokens": 3104,
+        "completion_tokens": 29,
+        "total_tokens": 3133,
+        "requests": 1
+      },
+      "mimo-v2-flash": {
+        "prompt_tokens": 726,
+        "completion_tokens": 2680,
+        "total_tokens": 3406,
+        "requests": 5
+      }
+    },
+    "2026-05-05": {
+      "mimo-v2-flash": {
+        "prompt_tokens": 16600,
+        "completion_tokens": 21895,
+        "total_tokens": 38495,
+        "requests": 27
+      },
+      "mimo-v2.5": {
+        "prompt_tokens": 22852,
+        "completion_tokens": 420,
+        "total_tokens": 23272,
+        "requests": 7
       }
     },
     "2026-05-06": {
       "mimo-v2-flash": {
-        "prompt_tokens": 162,
-        "completion_tokens": 389,
-        "total_tokens": 551,
+        "prompt_tokens": 1876,
+        "completion_tokens": 14524,
+        "total_tokens": 16400,
+        "requests": 10
+      },
+      "mimo-v2.5-pro": {
+        "prompt_tokens": 9806,
+        "completion_tokens": 115,
+        "total_tokens": 9921,
+        "requests": 3
+      },
+      "mimo-v2-pro": {
+        "prompt_tokens": 3112,
+        "completion_tokens": 164,
+        "total_tokens": 3276,
         "requests": 1
       }
     },
     "2026-05-07": {
-      "claude-sonnet-4-6": {
+      "mimo-2.5-pro": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "requests": 1
+      },
+      "mimo-v2.5-pro": {
+        "prompt_tokens": 10230,
+        "completion_tokens": 110,
+        "total_tokens": 10340,
+        "requests": 2
+      }
+    },
+    "2026-05-13": {
+      "mimo-v2.5-pro": {
+        "prompt_tokens": 3878,
+        "completion_tokens": 77,
+        "total_tokens": 3955,
+        "requests": 1
+      }
+    },
+    "2026-05-14": {
+      "mimo-default": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "requests": 1
+      },
+      "mimo-expert": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
         "total_tokens": 0,
         "requests": 2
-      },
-      "claude-opus-4-6": {
-        "prompt_tokens": 0,
-        "completion_tokens": 0,
-        "total_tokens": 0,
-        "requests": 1
-      },
-      "mimo-v2-flash": {
-        "prompt_tokens": 652,
-        "completion_tokens": 2913,
-        "total_tokens": 3565,
-        "requests": 4
-      },
-      "mimo-v2-pro": {
-        "prompt_tokens": 3098,
-        "completion_tokens": 58,
-        "total_tokens": 3156,
-        "requests": 1
       }
     }
   }
